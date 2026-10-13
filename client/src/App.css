@@ -1,0 +1,40 @@
+
+.generator {
+  margin-bottom: 24px;
+}
+
+.generator label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.topic-row {
+  display: flex;
+  gap: 12px;
+}
+
+.topic-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dfe1ec;
+  border-radius: 10px;
+}
+
+.hint {
+  color: #777b91;
+  font-size: 13px;
+}
+
+.error-message {
+  color: #b42332;
+  background: #fff1f2;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .topic-row {
+    flex-direction: column;
+  }
+}
