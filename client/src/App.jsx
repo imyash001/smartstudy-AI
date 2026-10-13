@@ -9,30 +9,112 @@ function App() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+const [authMode, setAuthMode] = useState("login");
+const [authUser, setAuthUser] = useState(null);
+const [authToken, setAuthToken] = useState("");
+const [authName, setAuthName] = useState("");
+const [authEmail, setAuthEmail] = useState("");
+const [authPassword, setAuthPassword] = useState("");
+const [authMessage, setAuthMessage] = useState("");
+const [authLoading, setAuthLoading] = useState(false);
+
+
+async function handleAuth(event) {
+  event.preventDefault();
+  setAuthLoading(true);
+  setAuthMessage("");
+
+  try {
+    const endpoint =
+      authMode === "register" ? "register" : "login";
+
+    const payload =
+      authMode === "register"
+        ? { name: authName, email: authEmail, password: authPassword }
+        : { email: authEmail, password: authPassword };
+
+    const response = await fetch(
+      `http://localhost:5000/api/auth/${endpoint}`,
+      {
+        method: "POST",
+        headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${authToken}`
+},
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Authentication failed.");
+    }
+
+    if (authMode === "register") {
+      setAuthMessage("Registration successful! Please log in.");
+      setAuthMode("login");
+      setAuthPassword("");
+    } else {
+      setAuthToken(data.token);
+      setAuthUser(data.user);
+      setAuthPassword("");
+      setAuthMessage(`Welcome, ${data.user.name}!`);
+    }
+  } catch (err) {
+    setAuthMessage(err.message || "Could not connect to the server.");
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+function handleLogout() {
+  setAuthToken("");
+  setAuthUser(null);
+  setAuthPassword("");
+  setAuthMessage("You have logged out.");
+}
+
+
 
   async function generateQuiz(event) {
+   
+    if (!authToken) {
+  setError("Please log in before generating a quiz.");
+  return;
+}
     if (event) event.preventDefault();
 
     setLoading(true);
     setError("");
     setSubmitted(false);
     setAnswers({});
+    console.log("Logged in:", !!authToken);
+console.log("Token length:", authToken.length);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/generate-quiz",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topic })
-        }
-      );
+     
+const response = await fetch(
+  "http://localhost:5000/api/generate-quiz",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`
+    },
+    body: JSON.stringify({ topic })
+  }
+);
+
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Unable to generate quiz.");
-      }
+if (!response.ok) {
+  throw new Error(
+    data.message || data.error || `Request failed: ${response.status}`
+  );
+}
 
       setQuiz(data);
     } catch (err) {
@@ -64,6 +146,105 @@ function App() {
 
   return (
     <main className="container">
+    
+<section className="quiz-card auth-card">
+  <span className="tag">YOUR ACCOUNT</span>
+
+  {authUser ? (
+    <div>
+      <h2>Welcome, {authUser.name}!</h2>
+      <p>{authUser.email}</p>
+      <button
+        type="button"
+        className="primary-button"
+        onClick={handleLogout}
+      >
+        Logout
+      </button>
+    </div>
+  ) : (
+    <>
+      <h2>{authMode === "login" ? "Login" : "Create an account"}</h2>
+
+      <div className="topic-row">
+        <button
+          type="button"
+          className="primary-button"
+          onClick={() => {
+            setAuthMode("login");
+            setAuthMessage("");
+          }}
+        >
+          Login
+        </button>
+
+        <button
+          type="button"
+          className="primary-button"
+          onClick={() => {
+            setAuthMode("register");
+            setAuthMessage("");
+          }}
+        >
+          Register
+        </button>
+      </div>
+
+      <form onSubmit={handleAuth}>
+        {authMode === "register" && (
+          <div>
+            <label htmlFor="auth-name">Name</label>
+            <input
+              id="auth-name"
+              value={authName}
+              onChange={event => setAuthName(event.target.value)}
+              required
+              maxLength={80}
+            />
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="auth-email">Email</label>
+          <input
+            id="auth-email"
+            type="email"
+            value={authEmail}
+            onChange={event => setAuthEmail(event.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="auth-password">Password</label>
+          <input
+            id="auth-password"
+            type="password"
+            value={authPassword}
+            onChange={event => setAuthPassword(event.target.value)}
+            minLength={8}
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="primary-button"
+          disabled={authLoading}
+        >
+          {authLoading
+            ? "Please wait..."
+            : authMode === "login"
+              ? "Login"
+              : "Create account"}
+        </button>
+      </form>
+    </>
+  )}
+
+  {authMessage && <p role="status">{authMessage}</p>}
+</section>
+
       <header className="hero">
         <span className="tag">YOUR PERSONAL LEARNING SPACE</span>
         <h1>SmartStudy AI <span>✦</span></h1>
